@@ -152,7 +152,7 @@ def _initier_paytech_transaction(*, inscription, paiement, success_url, cancel_u
     if not settings.PAYTECH_API_KEY or not settings.PAYTECH_API_SECRET:
         raise ValueError("Clés PayTech manquantes dans la configuration.")
 
-    reference = f"INSC-{inscription.id}-{timezone.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:6]}"
+    reference = f"INSC-{inscription.id}-{timezone.now().strftime('%Y%m%d%H%M%S%f')}-{uuid.uuid4().hex[:6]}"
 
     ipn_url = settings.PAYTECH_WEBHOOK_URL
     success = _normaliser_redirect_url(
