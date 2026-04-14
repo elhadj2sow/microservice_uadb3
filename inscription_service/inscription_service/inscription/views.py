@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.conf import settings
 import json
 import unicodedata
+import uuid
 import requests
 import logging
 
@@ -151,10 +152,7 @@ def _initier_paytech_transaction(*, inscription, paiement, success_url, cancel_u
     if not settings.PAYTECH_API_KEY or not settings.PAYTECH_API_SECRET:
         raise ValueError("Clés PayTech manquantes dans la configuration.")
 
-    reference = (
-        paiement.reference_paiement
-        or f"INSC-{inscription.id}-{timezone.now().strftime('%Y%m%d%H%M%S')}"
-    )
+    reference = f"INSC-{inscription.id}-{timezone.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:6]}"
 
     ipn_url = settings.PAYTECH_WEBHOOK_URL
     success = _normaliser_redirect_url(
@@ -966,6 +964,18 @@ class PayTechInitPaiementView(APIView):
                     'paiement': PaiementSerializer(paiement).data,
                 },
                 status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if paiement.payment_url and paiement.statut_paiement == 'en_attente':
+            return Response(
+                {
+                    'message': 'Session PayTech déjà initialisée.',
+                    'payment_url': paiement.payment_url,
+                    'reference_paiement': paiement.reference_paiement,
+                    'transaction_token': paiement.transaction_token,
+                    'paiement': PaiementSerializer(paiement).data,
+                },
+                status=status.HTTP_200_OK,
             )
 
         paiement.montant = montant_attendu
