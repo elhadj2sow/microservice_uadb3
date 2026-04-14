@@ -207,12 +207,18 @@ def _initier_paytech_transaction(*, inscription, paiement, success_url, cancel_u
     )
     data = response.json() if response.content else {}
 
-    if response.status_code >= 400:
-        raise ValueError(
-            data.get('message')
+    # PayTech retourne toujours HTTP 200, même en cas d'erreur.
+    # Le champ "success" (0 = erreur, 1 = succès) indique le vrai résultat.
+    paytech_failed = data.get('success') == 0
+    if response.status_code >= 400 or paytech_failed:
+        errors_list = data.get('errors')
+        error_msg = (
+            ('; '.join(errors_list) if isinstance(errors_list, list) and errors_list else None)
+            or data.get('message')
             or data.get('error')
             or "Erreur PayTech lors de l'initialisation du paiement."
         )
+        raise ValueError(error_msg)
 
     payment_url = (
         data.get('redirect_url')
